@@ -1,0 +1,2 @@
+C:/Users/chaha/dev/bio_med_vis_2025/Process_Volumes/out/build/x64-Debug/CMakeFiles/edit_cache.dir
+C:/Users/chaha/dev/bio_med_vis_2025/Process_Volumes/out/build/x64-Debug/CMakeFiles/rebuild_cache.dir

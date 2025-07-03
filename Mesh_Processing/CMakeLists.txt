@@ -1,17 +1,16 @@
 # Created by the script cgal_create_CMakeLists
 # This is the CMake script for compiling a set of CGAL applications.
 
-cmake_minimum_required(VERSION 3.1...3.23)
+project( Mesh_Processing )
 
-project( Process_Volumes )
-
+include($ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake)
 
 # CGAL and its components
-find_package( CGAL QUIET COMPONENTS  )
+find_package( CGAL COMPONENTS )
 
 if ( NOT CGAL_FOUND )
 
-  message(STATUS "This project requires the CGAL library, and will not be compiled.")
+  message(FATAL_ERROR "Mesh_Processing: This project requires the CGAL library, and will not be compiled.")
   return()  
 
 endif()
@@ -22,7 +21,7 @@ find_package( Boost REQUIRED )
 
 if ( NOT Boost_FOUND )
 
-  message(STATUS "This project requires the Boost library, and will not be compiled.")
+  message(FATAL_ERROR "Mesh_Processing: This project requires the Boost library, and will not be compiled.")
 
   return()  
 

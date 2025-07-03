@@ -35,6 +35,7 @@ include_directories( BEFORE include )
 
 # Creating entries for all C++ files with "main" routine
 # ##########################################################
+create_single_source_cgal_program("test.cpp")
 
 
 

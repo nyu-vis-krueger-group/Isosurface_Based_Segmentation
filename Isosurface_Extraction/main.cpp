@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
 	if (argc > 2 && std::stoi(argv[2])==1) {
 		std::cout << "Writing laplacian histogram as CSV." << std::endl;
 		begin = std::chrono::steady_clock::now();
-		WriteCSV<double> writer("hisotgram.csv");
+		WriteCSV<double> writer(inputTIFF+"_histogram.csv");
 		writer.write(histogram);
 		end = std::chrono::steady_clock::now();
 		std::cout << "Finished in " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.0 << "seconds.\n" << std::endl;
@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
 	std::cout << "Finished in " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.0 << "seconds.\n" << std::endl;
 
 	// Write the extracted contour as OBJ
-	std::cout << "Extracting contours using FlyingEdges3D." << std::endl;
+	std::cout << "Writing the extracted contours to "+ inputTIFF + "_output.obj" << std::endl;
 	begin = std::chrono::steady_clock::now();
 	WriteOBJ objWriter(inputTIFF+"_output.obj");
 	objWriter.write(contourExtractor.getOutput());

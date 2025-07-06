@@ -13,6 +13,7 @@
 #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Edge_count_ratio_stop_predicate.h>
 
 #include <CGAL/boost/graph/Face_filtered_graph.h>
+#include <CGAL/boost/graph/IO/PLY.h>
 #include <boost/property_map/property_map.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -78,9 +79,19 @@ int main(int argc, char* argv[])
     Mesh mesh;
 
     t.start();
-    if (!PMP::IO::read_polygon_mesh(filename, mesh))
+    /*if (!PMP::IO::read_polygon_mesh(filename, mesh))
     {
         std::cerr << "Invalid input." << std::endl;
+        return 1;
+    }*/
+    if (!CGAL::IO::read_PLY(filename, mesh,
+        CGAL::parameters::use_binary_mode(true)            // binary PLY :contentReference[oaicite:2]{index=2}
+        .vertex_point_map(get(CGAL::vertex_point, mesh))
+        .vertex_index_map(get(boost::vertex_index, mesh))
+        .face_index_map(get(boost::face_index, mesh))
+        .verbose(false)))
+    {
+        std::cerr << "Invalid PLY file\n";
         return 1;
     }
     t.stop();

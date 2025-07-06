@@ -12,10 +12,10 @@
         "CMAKE_C_COMPILER": "cl.exe",
         "CMAKE_CXX_COMPILER": "cl.exe",
         "CMAKE_CXX_FLAGS": "/std:c++17",
-        "CGAL_CMAKE_EXACT_NT_BACKEND": "BOOST_BACKEND",
-        "CGAL_DISABLE_GMP": "ON",
-        "CMAKE_DISABLE_FIND_PACKAGE_GMP": "ON",
-        "CMAKE_OVERRIDDEN_DEFAULT_ENT_BACKEND": "BOOST_BACKEND",
+        //"CGAL_CMAKE_EXACT_NT_BACKEND": "BOOST_BACKEND",
+        //"CGAL_DISABLE_GMP": "ON",
+        //"CMAKE_DISABLE_FIND_PACKAGE_GMP": "ON",
+        //"CMAKE_OVERRIDDEN_DEFAULT_ENT_BACKEND": "BOOST_BACKEND",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "VTK_DIR": "$env{VTK_DIR}"
       },
@@ -23,6 +23,9 @@
         "type": "equals",
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
+      },
+      "environment": {
+        "VCPKG_ROOT": "C:/Users/chaha/dev/libs/vcpkg"
       }
     },
     {

@@ -14,9 +14,11 @@ set(IO
 	"include/IO/ReadTIFF.h"
 	"include/IO/WriteOBJ.h"
 	"include/IO/WriteCSV.h"
+	"include/IO/WriteVTK.h"
 	"src/IO/ReadTIFF.cpp"
 	"src/IO/WriteOBJ.cpp"
 	"src/IO/WriteCSV.cpp"
+	"src/IO/WriteVTK.cpp"
 )
 
 set(EXTRACTION 

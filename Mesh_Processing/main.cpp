@@ -22,6 +22,7 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#include <cassert>
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel  Kernel;
 typedef Kernel::Point_3                                      Point;
@@ -60,28 +61,67 @@ static bool is_small_hole(halfedge_descriptor h, Mesh& mesh,
     return true;
 }
 
+#define FILTER_FACE_COUNT 100
+#define LARGEST_COMPONENT_NUMBER 10
+#define RELATIVE_ALPHA 300.0
+#define RELATIVE_OFFSET 750.0
+#define MESH_SIMPLIFICATION_STOP_RATIO 0.1
+
 int main(int argc, char* argv[])
 {
-    const std::string filename = (argc > 1) ? argv[1] : CGAL::data_file_path("channel_42_res_0_iso_788.obj");
+    assert(argc>1 && "Pass at least the filename, and optionally a config file.");
 
+    const std::string filename = argv[1];
+
+    std::cout << "Reading PLY input file " << filename << "." << std::endl;
+    CGAL::Real_timer t;
     Mesh mesh;
+
+    t.start();
     if (!PMP::IO::read_polygon_mesh(filename, mesh))
     {
         std::cerr << "Invalid input." << std::endl;
         return 1;
     }
+    t.stop();
 
-    PMP::keep_large_connected_components(mesh, 100);
+    std::cout << filename << "read in " << t.time() << "seconds" << std::endl;
+    t.reset();
 
+
+    std::cout << "Filtering components of face count < " << FILTER_FACE_COUNT << "." << std::endl;
+    t.start();
+    PMP::keep_large_connected_components(mesh, FILTER_FACE_COUNT);
+    t.stop();
+    std::cout << "Done in " << t.time() << "seconds." << std::endl;
+    t.reset();
+
+
+    std::cout << "Copying filtered mesh. "<< std::endl;
+    t.start();
     Mesh mesh_copy(mesh);
+    t.stop();
+    std::cout << "Done in " << t.time() << "seconds." << std::endl;
+    t.reset();
 
+
+    std::cout << std::endl;
+    std::cout << "LARGE COMPONENT DIMENSION CALCULATION" << std::endl;
     // keep 10 largest connected components
-    PMP::keep_largest_connected_components(mesh_copy, 10);
+    std::cout << "Keeping "<<LARGEST_COMPONENT_NUMBER<<" components in the copied mesh." << std::endl;
+    t.start();
+    PMP::keep_largest_connected_components(mesh_copy, LARGEST_COMPONENT_NUMBER);
+    t.stop();
+    std::cout << "Done in " << t.time() << "seconds." << std::endl;
+    t.reset();
 
-    // iterate over the 10 largest 
+
+
+    std::cout << "Iterating over " << LARGEST_COMPONENT_NUMBER << " components in the copied mesh, calculating their bounding box diags." << std::endl;
+    t.start();
+
     FCCmap fccmap = mesh_copy.add_property_map<face_descriptor, faces_size_type>("f:CC").first;
     faces_size_type num = PMP::connected_components(mesh_copy, fccmap);
-    std::cerr << "- The graph has " << num << " connected components (face connectivity)" << std::endl;
 
     std::vector<Mesh> meshes(num);
     double avg_diagonal = 0.0;
@@ -109,24 +149,33 @@ int main(int argc, char* argv[])
     avg_diagonal /= num;
     avg_num_faces /= num;
 
-    std::cout << "Average diag length in 10 largest connected components: " << avg_diagonal << std::endl;
+    t.stop();
+    std::cout << "Done in " << t.time() << "seconds." << std::endl;
+    t.reset();
 
-    const double relative_alpha = 300.0;
-    const double relative_offset = 900.0;
-    const double alpha = avg_diagonal / relative_alpha;
-    const double offset = avg_diagonal / relative_offset;
-    std::cout << "alpha: " << alpha << ", offset: " << offset << std::endl;
+
+    std::cout << "Average diagonal in " << LARGEST_COMPONENT_NUMBER << " components: " << avg_diagonal << std::endl;
+    std::cout << "Max diagonal in " << LARGEST_COMPONENT_NUMBER << " components: " << max_diagonal << std::endl;
+    std::cout << "Average num_faces in " << LARGEST_COMPONENT_NUMBER << " components: " << avg_num_faces << std::endl;
+    std::cout << "Max num_faces in " << LARGEST_COMPONENT_NUMBER << " components: " << max_num_faces << std::endl;
+
 
     // hole filling
+    std::cout << std::endl;
+    std::cout << "HOLE FILLING" << std::endl;
+
     double max_hole_diam = max_diagonal;
     int max_num_hole_edges = max_num_faces;
+
+    std::cout << "Max hole diameter: " << max_diagonal << std::endl;
+    std::cout << "Max number of hole edges: " << max_num_faces << std::endl;
+
+    t.start();
 
     unsigned int nb_holes = 0;
     std::vector<halfedge_descriptor> border_cycles;
 
-    // collect one halfedge per boundary cycle
     PMP::extract_boundary_cycles(mesh, std::back_inserter(border_cycles));
-    std::cout << "borders: " << border_cycles.size() << std::endl;
 
     for (halfedge_descriptor h : border_cycles)
     {
@@ -138,31 +187,56 @@ int main(int argc, char* argv[])
 
         ++nb_holes;
     }
+    t.stop();
+
+    std::cout << nb_holes << " holes have been filled." << std::endl;
+    std::cout << "Done in " << t.time() << " seconds." << std::endl;
+    t.reset();
+
+
 
     std::cout << std::endl;
-    std::cout << nb_holes << " holes have been filled" << std::endl;
+    std::cout << "ALPHA WRAPPING" << std::endl;
 
-    // Construct the wrap
-    CGAL::Real_timer t;
+    const double alpha = avg_diagonal / RELATIVE_ALPHA;
+    const double offset = avg_diagonal / RELATIVE_OFFSET;
+
+    std::cout << "ALPHA WRAP PARAMS -> alpha: " << alpha << ", offset: " << offset << std::endl;    
+
     t.start();
 
     Mesh wrap;
     CGAL::alpha_wrap_3(mesh, alpha, offset, wrap);
 
     t.stop();
-    std::cout << "Result: " << num_vertices(wrap) << " vertices, " << num_faces(wrap) << " faces" << std::endl;
-    std::cout << "Took " << t.time() << " s." << std::endl;
+    std::cout << "Done in " << t.time() << " seconds." << std::endl;
+    t.reset();
+
 
     // simplification
-    double stop_ratio = 0.1;
-    SMS::Edge_count_ratio_stop_predicate<Mesh> stop(stop_ratio);
+    std::cout << std::endl;
+    std::cout << "MESH SIMPLIFICATION" << std::endl;
+    std::cout << "Stop ratioo: " << MESH_SIMPLIFICATION_STOP_RATIO << std::endl;
+
+    t.start();
+    SMS::Edge_count_ratio_stop_predicate<Mesh> stop(MESH_SIMPLIFICATION_STOP_RATIO);
     int r = SMS::edge_collapse(wrap, stop);
+    t.stop();
     std::cout << r << " edgegs removed." << std::endl;
+    std::cout << "Done in " << t.time() << " seconds." << std::endl;
+    t.reset();
+
     
     // Save the result
-    const std::string output_name = "channel_42_res_0_iso_788_a300_o900_hole3.off";
+    std::cout << std::endl;
+    std::cout << "WRITING OUTPUT MESH" << std::endl;
+    t.start();
+    const std::string output_name = filename+".off";
     std::cout << "Writing to " << output_name << std::endl;
     CGAL::IO::write_polygon_mesh(output_name, wrap, CGAL::parameters::stream_precision(17));
+    t.stop();
+    std::cout << "Done in " << t.time() << " seconds." << std::endl;
+    t.reset();
 
 
     return 0;

@@ -6,6 +6,7 @@ find_package(VTK COMPONENTS
 	  FiltersExtraction
 	  IOImage
 	  IOExport
+	  IOPLY
 	  IOGeometry
 	  ImagingGeneral
 )
@@ -15,10 +16,12 @@ set(IO
 	"include/IO/WriteOBJ.h"
 	"include/IO/WriteCSV.h"
 	"include/IO/WriteVTK.h"
+	"include/IO/WritePLY.h"
 	"src/IO/ReadTIFF.cpp"
 	"src/IO/WriteOBJ.cpp"
 	"src/IO/WriteCSV.cpp"
 	"src/IO/WriteVTK.cpp"
+	"src/IO/WritePLY.cpp"
 )
 
 set(EXTRACTION 

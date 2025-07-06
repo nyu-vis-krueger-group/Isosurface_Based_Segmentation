@@ -1,7 +1,7 @@
 #include <IO/WriteCSV.h>
 #include <IO/ReadTIFF.h>
 #include <IsosurfaceExtraction/FlyingEdges3D.h>
-#include <IO/WriteVTK.h>
+#include <IO/WritePLY.h>
 #include <Processing/CummulativeLaplacianHistogram.h>
 #include <chrono>
 
@@ -53,8 +53,8 @@ int main(int argc, char* argv[]) {
 	// Write the extracted contour as OBJ
 	std::cout << "Writing the extracted contours to "+ inputTIFF + "_output.vtp" << std::endl;
 	begin = std::chrono::steady_clock::now();
-	WriteVTK vtkWriter(inputTIFF+"_output.vtp");
-	vtkWriter.write(contourExtractor.getOutput());
+	WritePLY plyWriter(inputTIFF+"_output.ply");
+	plyWriter.write(contourExtractor.getOutput());
 	end = std::chrono::steady_clock::now();
 	std::cout << "Finished in " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.0 << "seconds.\n" << std::endl;
 

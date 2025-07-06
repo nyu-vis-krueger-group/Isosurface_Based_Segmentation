@@ -8,7 +8,7 @@
 int main(int argc, char* argv[]) {
 	std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
 
-	std::cout << "Isosurface Extractor: Finds an optimal isovalue, extracts that contour, and saves it as an OBJ.\n" << std::endl;
+	std::cout << "Isosurface Extractor: Finds an optimal isovalue, extracts that contour, and saves it as a PLY.\n" << std::endl;
 	std::cout << "Arg 1: input TIFF file, Arg 2 (Optional): 1, if you save the laplacian histogram as csv.\n" << std::endl;
 
 	std::string inputTIFF = argv[1];
@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
 	std::cout << "Finished in " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.0 << "seconds.\n" << std::endl;
 
 	// Write the extracted contour as OBJ
-	std::cout << "Writing the extracted contours to "+ inputTIFF + "_output.vtp" << std::endl;
+	std::cout << "Writing the extracted contours to "+ inputTIFF + "_output.ply" << std::endl;
 	begin = std::chrono::steady_clock::now();
 	WritePLY plyWriter(inputTIFF+"_output.ply");
 	plyWriter.write(contourExtractor.getOutput());

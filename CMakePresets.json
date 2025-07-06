@@ -11,7 +11,7 @@
       "cacheVariables": {
         "CMAKE_C_COMPILER": "cl.exe",
         "CMAKE_CXX_COMPILER": "cl.exe",
-        "CMAKE_CXX_FLAGS": "/std:c++17",
+        "CMAKE_CXX_FLAGS": "/std:c++17 /EHsc",
         //"CGAL_CMAKE_EXACT_NT_BACKEND": "BOOST_BACKEND",
         //"CGAL_DISABLE_GMP": "ON",
         //"CMAKE_DISABLE_FIND_PACKAGE_GMP": "ON",

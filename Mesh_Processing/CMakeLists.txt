@@ -32,10 +32,9 @@ include_directories( BEFORE include )
 
 # include for local package
 
-
 # Creating entries for all C++ files with "main" routine
 # ##########################################################
-create_single_source_cgal_program("test.cpp")
+create_single_source_cgal_program("main.cpp")
 
 
 

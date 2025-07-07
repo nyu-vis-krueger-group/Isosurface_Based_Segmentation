@@ -1,16 +1,22 @@
-project(Heirarchical_Clustering)
+project(Heirarchical_Clustering LANGUAGES CXX)
+
+set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+    CACHE STRING "")
+
+find_package(Eigen3    REQUIRED NO_MODULE)    
+find_package(CGAL     REQUIRED COMPONENTS Core)  
 
 
-set(SOURCE_DIRS
-	"main.cpp"
+add_executable(Heirarchical_Clustering MACOSX_BUNDLE main.cpp)
+
+target_include_directories(Heirarchical_Clustering
+  PRIVATE
+    ${Eigen3_INCLUDE_DIRS}
+    ${CGAL_INCLUDE_DIRS}
 )
 
-set(INCLUDE_DIRS
-	$ENV{LIBIGL_INCLUDE_DIR}
+target_link_libraries(Heirarchical_Clustering
+  PRIVATE
+    Eigen3::Eigen
+    CGAL::CGAL
 )
-
-
-set(CMAKE_NINJA_FORCE_RESPONSE_FILE "ON" CACHE BOOL "Force Ninja to use response files.")
-add_executable(Heirarchical_Clustering MACOSX_BUNDLE ${SOURCE_DIRS} )
-
-target_include_directories(Isosurface_Extraction PRIVATE ${INCLUDE_DIRS})

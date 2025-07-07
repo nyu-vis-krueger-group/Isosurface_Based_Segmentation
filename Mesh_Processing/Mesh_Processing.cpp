@@ -237,6 +237,24 @@ int main(int argc, char* argv[])
     std::cout << "Done in " << t.time() << " seconds." << std::endl;
     t.reset();
 
+    // simplification
+    /*std::cout << std::endl;
+    std::cout << "MESH SIMPLIFICATION" << std::endl;
+    std::cout << "Stop ratio: " << MESH_SIMPLIFICATION_STOP_RATIO << std::endl;
+
+    t.start();
+    SMS::Edge_count_ratio_stop_predicate<Mesh> stop(MESH_SIMPLIFICATION_STOP_RATIO);
+    typedef SMS::LindstromTurk_placement<Mesh> Placement;
+    SMS::Bounded_normal_change_filter<> filter;
+    int r = SMS::edge_collapse(mesh, stop,
+        CGAL::parameters::get_cost(SMS::LindstromTurk_cost<Mesh>())
+        .filter(filter)
+        .get_placement(Placement()));
+    t.stop();
+    std::cout << r << " edgegs removed." << std::endl;
+    std::cout << "Done in " << t.time() << " seconds." << std::endl;
+    t.reset();*/
+
     // alpha wrapping
     std::cout << std::endl;
     std::cout << "ALPHA WRAPPING" << std::endl;
@@ -252,26 +270,6 @@ int main(int argc, char* argv[])
     CGAL::alpha_wrap_3(mesh, alpha, offset, wrap);
 
     t.stop();
-    std::cout << "Done in " << t.time() << " seconds." << std::endl;
-    t.reset();
-
-
-    // simplification
-    std::cout << std::endl;
-    std::cout << "MESH SIMPLIFICATION" << std::endl;
-    std::cout << "Stop ratio: " << MESH_SIMPLIFICATION_STOP_RATIO << std::endl;
-
-
-    t.start();
-    SMS::Edge_count_ratio_stop_predicate<Mesh> stop(MESH_SIMPLIFICATION_STOP_RATIO);
-    typedef SMS::LindstromTurk_placement<Mesh> Placement;
-    SMS::Bounded_normal_change_filter<> filter;
-    int r = SMS::edge_collapse(wrap, stop,
-        CGAL::parameters::get_cost(SMS::LindstromTurk_cost<Mesh>())
-        .filter(filter)
-        .get_placement(Placement()));
-    t.stop();
-    std::cout << r << " edgegs removed." << std::endl;
     std::cout << "Done in " << t.time() << " seconds." << std::endl;
     t.reset();
 

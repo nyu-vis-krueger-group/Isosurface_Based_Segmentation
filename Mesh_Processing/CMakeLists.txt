@@ -34,7 +34,7 @@ include_directories( BEFORE include )
 
 # Creating entries for all C++ files with "main" routine
 # ##########################################################
-create_single_source_cgal_program("main.cpp")
+create_single_source_cgal_program("Mesh_Processing.cpp")
 
 
 

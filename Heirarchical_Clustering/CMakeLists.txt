@@ -1,40 +1,16 @@
-# Created by the script cgal_create_CMakeLists
-# This is the CMake script for compiling a set of CGAL applications.
-
-project( Heirarchical_Clustering )
-include($ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake)
-
-# CGAL and its components
-find_package( CGAL COMPONENTS )
-
-if ( NOT CGAL_FOUND )
-
-  message(FATAL_ERROR "Heirarchical_Clustering: This project requires the CGAL library, and will not be compiled.")
-  return()  
-
-endif()
+project(Heirarchical_Clustering)
 
 
-# Boost and its components
-find_package( Boost REQUIRED )
+set(SOURCE_DIRS
+	"main.cpp"
+)
 
-if ( NOT Boost_FOUND )
-
-  message(FATAL_ERROR "Heirarchical_Clustering: This project requires the Boost library, and will not be compiled.")
-
-  return()  
-
-endif()
-
-# include for local directory
-include_directories( BEFORE include )
-
-# include for local package
-
-# Creating entries for all C++ files with "main" routine
-# ##########################################################
-create_single_source_cgal_program("cluster.cpp")
+set(INCLUDE_DIRS
+	$ENV{LIBIGL_INCLUDE_DIR}
+)
 
 
+set(CMAKE_NINJA_FORCE_RESPONSE_FILE "ON" CACHE BOOL "Force Ninja to use response files.")
+add_executable(Heirarchical_Clustering MACOSX_BUNDLE ${SOURCE_DIRS} )
 
-
+target_include_directories(Isosurface_Extraction PRIVATE ${INCLUDE_DIRS})

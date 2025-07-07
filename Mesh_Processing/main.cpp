@@ -11,6 +11,9 @@
 
 #include <CGAL/Surface_mesh_simplification/edge_collapse.h>
 #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Edge_count_ratio_stop_predicate.h>
+#include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/LindstromTurk_cost.h>
+#include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/LindstromTurk_placement.h>
+#include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Bounded_normal_change_filter.h>
 
 #include <CGAL/boost/graph/Face_filtered_graph.h>
 #include <CGAL/boost/graph/IO/PLY.h>
@@ -40,6 +43,23 @@ typedef CGAL::Face_filtered_graph<Mesh>                      Filtered_graph;
 namespace PMP = CGAL::Polygon_mesh_processing;
 namespace SMS = CGAL::Surface_mesh_simplification;
 
+struct Dummy_placement {
+
+    template <typename Profile>
+    std::optional<typename Profile::Point> operator()(const Profile&) const
+    {
+        return std::nullopt;
+    }
+
+    template <typename Profile>
+    std::optional<typename Profile::Point> operator()(const Profile&, const std::optional<typename Profile::Point>& op) const
+    {
+        return op;
+    }
+
+
+};
+
 static bool is_small_hole(halfedge_descriptor h, Mesh& mesh,
     double max_hole_diam, int max_num_hole_edges)
 {
@@ -62,11 +82,18 @@ static bool is_small_hole(halfedge_descriptor h, Mesh& mesh,
     return true;
 }
 
-#define FILTER_FACE_COUNT 100
+#define INITIAL_FILTER_FACE_COUNT 100
 #define LARGEST_COMPONENT_NUMBER 10
 #define RELATIVE_ALPHA 300.0
 #define RELATIVE_OFFSET 750.0
 #define MESH_SIMPLIFICATION_STOP_RATIO 0.1
+#define FINAL_FILTER_FACE_COUNT 15
+#define FINAL_FILTER_SIZE_RATIO 0.05
+
+/*
+* REGULARIZE BEFORE FINAL FILTERING
+*/
+
 
 int main(int argc, char* argv[])
 {
@@ -74,6 +101,7 @@ int main(int argc, char* argv[])
 
     const std::string filename = argv[1];
 
+    std::cout << "READING" << std::endl;
     std::cout << "Reading PLY input file " << filename << "." << std::endl;
     CGAL::Real_timer t;
     Mesh mesh;
@@ -99,15 +127,20 @@ int main(int argc, char* argv[])
     std::cout << filename << "read in " << t.time() << "seconds" << std::endl;
     t.reset();
 
-
-    std::cout << "Filtering components of face count < " << FILTER_FACE_COUNT << "." << std::endl;
+    // initial filtering
+    std::cout << std::endl;
+    std::cout << "INITIAL FILTERING" << std::endl;
+    std::cout << "Filtering components of face count < " << INITIAL_FILTER_FACE_COUNT << "." << std::endl;
     t.start();
-    PMP::keep_large_connected_components(mesh, FILTER_FACE_COUNT);
+    PMP::keep_large_connected_components(mesh, INITIAL_FILTER_FACE_COUNT);
     t.stop();
     std::cout << "Done in " << t.time() << "seconds." << std::endl;
     t.reset();
 
 
+    // copying mesh
+    std::cout << std::endl;
+    std::cout << "COPYING" << std::endl;
     std::cout << "Copying filtered mesh. "<< std::endl;
     t.start();
     Mesh mesh_copy(mesh);
@@ -116,16 +149,16 @@ int main(int argc, char* argv[])
     t.reset();
 
 
+    // finding representative diagonal and size
     std::cout << std::endl;
     std::cout << "LARGE COMPONENT DIMENSION CALCULATION" << std::endl;
-    // keep 10 largest connected components
+   
     std::cout << "Keeping "<<LARGEST_COMPONENT_NUMBER<<" components in the copied mesh." << std::endl;
     t.start();
     PMP::keep_largest_connected_components(mesh_copy, LARGEST_COMPONENT_NUMBER);
     t.stop();
     std::cout << "Done in " << t.time() << "seconds." << std::endl;
     t.reset();
-
 
 
     std::cout << "Iterating over " << LARGEST_COMPONENT_NUMBER << " components in the copied mesh, calculating their bounding box diags." << std::endl;
@@ -164,7 +197,7 @@ int main(int argc, char* argv[])
     std::cout << "Done in " << t.time() << "seconds." << std::endl;
     t.reset();
 
-
+    std::cout << std::endl;
     std::cout << "Average diagonal in " << LARGEST_COMPONENT_NUMBER << " components: " << avg_diagonal << std::endl;
     std::cout << "Max diagonal in " << LARGEST_COMPONENT_NUMBER << " components: " << max_diagonal << std::endl;
     std::cout << "Average num_faces in " << LARGEST_COMPONENT_NUMBER << " components: " << avg_num_faces << std::endl;
@@ -204,15 +237,14 @@ int main(int argc, char* argv[])
     std::cout << "Done in " << t.time() << " seconds." << std::endl;
     t.reset();
 
-
-
+    // alpha wrapping
     std::cout << std::endl;
     std::cout << "ALPHA WRAPPING" << std::endl;
 
     const double alpha = avg_diagonal / RELATIVE_ALPHA;
     const double offset = avg_diagonal / RELATIVE_OFFSET;
 
-    std::cout << "ALPHA WRAP PARAMS -> alpha: " << alpha << ", offset: " << offset << std::endl;    
+    std::cout << "params -> alpha: " << alpha << ", offset: " << offset << std::endl;    
 
     t.start();
 
@@ -227,16 +259,81 @@ int main(int argc, char* argv[])
     // simplification
     std::cout << std::endl;
     std::cout << "MESH SIMPLIFICATION" << std::endl;
-    std::cout << "Stop ratioo: " << MESH_SIMPLIFICATION_STOP_RATIO << std::endl;
+    std::cout << "Stop ratio: " << MESH_SIMPLIFICATION_STOP_RATIO << std::endl;
+
 
     t.start();
     SMS::Edge_count_ratio_stop_predicate<Mesh> stop(MESH_SIMPLIFICATION_STOP_RATIO);
-    int r = SMS::edge_collapse(wrap, stop);
+    typedef SMS::LindstromTurk_placement<Mesh> Placement;
+    SMS::Bounded_normal_change_filter<> filter;
+    int r = SMS::edge_collapse(wrap, stop,
+        CGAL::parameters::get_cost(SMS::LindstromTurk_cost<Mesh>())
+        .filter(filter)
+        .get_placement(Placement()));
     t.stop();
     std::cout << r << " edgegs removed." << std::endl;
     std::cout << "Done in " << t.time() << " seconds." << std::endl;
     t.reset();
 
+
+    // final filtering
+    // copying mesh
+    std::cout << std::endl;
+    std::cout << "COPYING" << std::endl;
+    std::cout << "Copying filtered mesh. " << std::endl;
+    t.start();
+    Mesh wrap_copy(wrap);
+    t.stop();
+    std::cout << "Done in " << t.time() << "seconds." << std::endl;
+    t.reset();
+
+
+    // finding representative diagonal and size
+    std::cout << std::endl;
+    std::cout << "LARGE COMPONENT DIMENSION CALCULATION" << std::endl;
+
+    std::cout << "Keeping " << LARGEST_COMPONENT_NUMBER << " components in the copied mesh." << std::endl;
+    t.start();
+    PMP::keep_largest_connected_components(wrap_copy, LARGEST_COMPONENT_NUMBER);
+    t.stop();
+    std::cout << "Done in " << t.time() << "seconds." << std::endl;
+    t.reset();
+
+
+    std::cout << "Iterating over " << LARGEST_COMPONENT_NUMBER << " components in the copied mesh, calculating their bounding box diags." << std::endl;
+    t.start();
+
+    FCCmap fccmap1 = wrap_copy.add_property_map<face_descriptor, faces_size_type>("f:CC").first;
+    faces_size_type num1 = PMP::connected_components(wrap_copy, fccmap1);
+
+    std::vector<Mesh> meshes1(num1);
+    avg_num_faces = 0;
+
+    for (int i = 0; i < num1; ++i)
+    {
+        Filtered_graph ffg(wrap_copy, i, fccmap1);
+        CGAL::copy_face_graph(ffg, meshes1[i]);
+
+        int n = num_faces(meshes1[i]);
+        avg_num_faces += n;
+    }
+
+    avg_num_faces /= num1;
+
+    t.stop();
+    std::cout << "Done in " << t.time() << "seconds." << std::endl;
+    t.reset();
+
+    std::cout << std::endl;
+    std::cout << "FINAL FILTERING" << std::endl;
+    std::cout << "Filtering components of face count < " << (int)(avg_num_faces * FINAL_FILTER_SIZE_RATIO) << "." << std::endl;
+    //std::cout << "Filtering components of face count < " << FINAL_FILTER_FACE_COUNT << "." << std::endl;
+    t.start();
+    PMP::keep_large_connected_components(wrap, (int)(avg_num_faces*FINAL_FILTER_SIZE_RATIO));
+    //PMP::keep_large_connected_components(wrap, (int)(FINAL_FILTER_FACE_COUNT));
+    t.stop();
+    std::cout << "Done in " << t.time() << " seconds." << std::endl;
+    t.reset();
     
     // Save the result
     std::cout << std::endl;

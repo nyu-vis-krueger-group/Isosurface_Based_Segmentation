@@ -1,2 +1,6 @@
 .vs
 out
+py/dist
+py/build
+*.spec
+.venv

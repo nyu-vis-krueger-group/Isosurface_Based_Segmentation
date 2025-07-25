@@ -1,0 +1,5 @@
+SET SIMILARITY="..\py\build\exe.win-amd64-3.9"
+SET RELEASE_DIR="..\out\build\x64-release"
+SET HEIRARCHICAL_CLUSTERING="%RELEASE_DIR%\Heirarchical_Clustering"
+
+XCOPY /s/e/y %SIMILARITY% %HEIRARCHICAL_CLUSTERING%

@@ -1,0 +1,17 @@
+1.
+Find out the channels we want to process. These are unique channel names in which 'do not use' is not mentioned. In case of repeated occurances of each channel, we only take the first occurance into consideration.
+
+2. 
+Use dask to extract a small chunk of these volumes 100x100 for each of them.
+
+3.
+We save them as tiffs and invoke the auto-isosurface extraction and mesh processing pipelines on them.
+
+4.
+We voxelise the processed meshes into binary volumes.
+
+5. 
+We perform co-location analysis on the multivolumes.
+
+6. 
+We save these results for each chunk. Repeat pipeline till we have processed the entire volume.

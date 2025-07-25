@@ -5,6 +5,7 @@
 #include <CGAL/Polygon_mesh_processing/bbox.h>
 #include <CGAL/Polygon_mesh_processing/corefinement.h>
 #include <CGAL/Polygon_mesh_processing/transform.h>
+#include <CGAL/Polygon_mesh_processing/mer>
 
 #include <CGAL/boost/graph/IO/PLY.h>
 #include <CGAL/boost/graph/IO/OFF.h>

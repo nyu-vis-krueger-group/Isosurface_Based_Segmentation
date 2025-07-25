@@ -13,11 +13,13 @@ find_package(VTK COMPONENTS
 
 set(IO 
 	"include/IO/ReadTIFF.h"
+	"include/IO/ReadVTI.h"
 	"include/IO/WriteOBJ.h"
 	"include/IO/WriteCSV.h"
 	"include/IO/WriteVTK.h"
 	"include/IO/WritePLY.h"
 	"src/IO/ReadTIFF.cpp"
+	"src/IO/ReadVTI.cpp"
 	"src/IO/WriteOBJ.cpp"
 	"src/IO/WriteCSV.cpp"
 	"src/IO/WriteVTK.cpp"

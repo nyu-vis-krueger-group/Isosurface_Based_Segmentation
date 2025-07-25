@@ -1,0 +1,5 @@
+SET RELEASE_DIR="..\out\build\x64-release"
+SET ISOSURFACE_EXTRACTION="%RELEASE_DIR%\Isosurface_Extraction"
+SET MESH_PROCESSING="%RELEASE_DIR%\Mesh_Processing\Mesh_Processing.exe"
+
+COPY %MESH_PROCESSING% %ISOSURFACE_EXTRACTION%

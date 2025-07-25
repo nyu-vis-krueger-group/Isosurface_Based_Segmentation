@@ -26,7 +26,7 @@ namespace PMP = CGAL::Polygon_mesh_processing;
 
 int main(int argc, char* argv[])
 {
-    assert(argc == 4 && "mesh1.off mesh2.off combine-along[X/Y]");
+    assert(argc == 5 && "mesh1.off mesh2.off X-offset Y-offset");
 
     const std::vector<std::string> filenames = { argv[1], argv[2] };
 
@@ -51,25 +51,12 @@ int main(int argc, char* argv[])
         std::cout << filenames[i] << " read.\n" << std::endl;
     }
 
-    std::vector<double> lengths(2);
-
-    std::string combine_along = argv[3];
+    // transformation (translation) of tile into correct position
+    int x_off(std::stoi(argv[3])), y_off(std::stoi(argv[4]));
 
     CGAL::Bbox_3 bbox = CGAL::Polygon_mesh_processing::bbox(inputMeshes[0]);
-    if (!combine_along.compare("X")) {
-        // combine along X
-        const double length = bbox.xmax() - bbox.xmin();
-        // translate second mesh by length of first mesh along x so they are side by side
-        PMP::transform(Affine_transformation_3(CGAL::Translation(),
-            Vector_3(length, 0, 0)), inputMeshes[1]);
-    }
-    else {
-        // combine along Y
-        const double length = bbox.ymax() - bbox.ymin();
-        // translate second mesh by length of first mesh along y so they are top and bottom
-        PMP::transform(Affine_transformation_3(CGAL::Translation(),
-            Vector_3(0, length, 0)), inputMeshes[1]);
-    }
+    PMP::transform(Affine_transformation_3(CGAL::Translation(),
+        Vector_3(x_off, y_off, 0)), inputMeshes[1]);
 
     // take mesh union to combine them
     Mesh out;

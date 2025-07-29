@@ -4,3 +4,7 @@ py/dist
 py/build
 *.spec
 .venv
+*.off
+*.ply
+*.csv
+*.tiff

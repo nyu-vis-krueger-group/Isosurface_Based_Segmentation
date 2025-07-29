@@ -89,6 +89,7 @@ static bool is_small_hole(halfedge_descriptor h, Mesh& mesh,
 #define MESH_SIMPLIFICATION_STOP_RATIO 0.1
 #define FINAL_FILTER_FACE_COUNT 15
 #define FINAL_FILTER_SIZE_RATIO 0.05
+#define FILTERATION_MIN_COMPONENT_COUNT 1
 
 /*
 * REGULARIZE BEFORE FINAL FILTERING
@@ -173,87 +174,89 @@ int main(int argc, char* argv[])
     int avg_num_faces = 0;
     int max_num_faces = 0;
 
-    for (int i = 0; i < num; ++i)
-    {
-        Filtered_graph ffg(mesh_copy, i, fccmap);
-        CGAL::copy_face_graph(ffg, meshes[i]);
+    if (num > FILTERATION_MIN_COMPONENT_COUNT) {
+        for (int i = 0; i < num; ++i)
+        {
+            Filtered_graph ffg(mesh_copy, i, fccmap);
+            CGAL::copy_face_graph(ffg, meshes[i]);
 
-        CGAL::Bbox_3 bbox = CGAL::Polygon_mesh_processing::bbox(mesh);
-        const double diag_length = std::sqrt(CGAL::square(bbox.xmax() - bbox.xmin()) +
-            CGAL::square(bbox.ymax() - bbox.ymin()) +
-            CGAL::square(bbox.zmax() - bbox.zmin()));
+            CGAL::Bbox_3 bbox = CGAL::Polygon_mesh_processing::bbox(mesh);
+            const double diag_length = std::sqrt(CGAL::square(bbox.xmax() - bbox.xmin()) +
+                CGAL::square(bbox.ymax() - bbox.ymin()) +
+                CGAL::square(bbox.zmax() - bbox.zmin()));
 
-        int n = num_faces(meshes[i]);
-        avg_diagonal += diag_length;
-        avg_num_faces += n;
-        max_diagonal = std::max(diag_length, max_diagonal);
-        max_num_faces = std::max(n, max_num_faces);
+            int n = num_faces(meshes[i]);
+            avg_diagonal += diag_length;
+            avg_num_faces += n;
+            max_diagonal = std::max(diag_length, max_diagonal);
+            max_num_faces = std::max(n, max_num_faces);
+        }
+
+        avg_diagonal /= num;
+        avg_num_faces /= num;
+
+        t.stop();
+        std::cout << "Done in " << t.time() << "seconds." << std::endl;
+        t.reset();
+
+        std::cout << std::endl;
+        std::cout << "Average diagonal in " << LARGEST_COMPONENT_NUMBER << " components: " << avg_diagonal << std::endl;
+        std::cout << "Max diagonal in " << LARGEST_COMPONENT_NUMBER << " components: " << max_diagonal << std::endl;
+        std::cout << "Average num_faces in " << LARGEST_COMPONENT_NUMBER << " components: " << avg_num_faces << std::endl;
+        std::cout << "Max num_faces in " << LARGEST_COMPONENT_NUMBER << " components: " << max_num_faces << std::endl;
+
+
+        // hole filling
+        std::cout << std::endl;
+        std::cout << "HOLE FILLING" << std::endl;
+
+        double max_hole_diam = max_diagonal;
+        int max_num_hole_edges = max_num_faces;
+
+        std::cout << "Max hole diameter: " << max_diagonal << std::endl;
+        std::cout << "Max number of hole edges: " << max_num_faces << std::endl;
+
+        t.start();
+
+        unsigned int nb_holes = 0;
+        std::vector<halfedge_descriptor> border_cycles;
+
+        PMP::extract_boundary_cycles(mesh, std::back_inserter(border_cycles));
+
+        for (halfedge_descriptor h : border_cycles)
+        {
+            if (max_hole_diam > 0 && max_num_hole_edges > 0 &&
+                !is_small_hole(h, mesh, max_hole_diam, max_num_hole_edges))
+                continue;
+
+            PMP::triangulate_hole(mesh, h);
+
+            ++nb_holes;
+        }
+        t.stop();
+
+        std::cout << nb_holes << " holes have been filled." << std::endl;
+        std::cout << "Done in " << t.time() << " seconds." << std::endl;
+        t.reset();
+
+        // simplification
+        /*std::cout << std::endl;
+        std::cout << "MESH SIMPLIFICATION" << std::endl;
+        std::cout << "Stop ratio: " << MESH_SIMPLIFICATION_STOP_RATIO << std::endl;
+
+        t.start();
+        SMS::Edge_count_ratio_stop_predicate<Mesh> stop(MESH_SIMPLIFICATION_STOP_RATIO);
+        typedef SMS::LindstromTurk_placement<Mesh> Placement;
+        SMS::Bounded_normal_change_filter<> filter;
+        int r = SMS::edge_collapse(mesh, stop,
+            CGAL::parameters::get_cost(SMS::LindstromTurk_cost<Mesh>())
+            .filter(filter)
+            .get_placement(Placement()));
+        t.stop();
+        std::cout << r << " edgegs removed." << std::endl;
+        std::cout << "Done in " << t.time() << " seconds." << std::endl;
+        t.reset();*/
     }
-
-    avg_diagonal /= num;
-    avg_num_faces /= num;
-
-    t.stop();
-    std::cout << "Done in " << t.time() << "seconds." << std::endl;
-    t.reset();
-
-    std::cout << std::endl;
-    std::cout << "Average diagonal in " << LARGEST_COMPONENT_NUMBER << " components: " << avg_diagonal << std::endl;
-    std::cout << "Max diagonal in " << LARGEST_COMPONENT_NUMBER << " components: " << max_diagonal << std::endl;
-    std::cout << "Average num_faces in " << LARGEST_COMPONENT_NUMBER << " components: " << avg_num_faces << std::endl;
-    std::cout << "Max num_faces in " << LARGEST_COMPONENT_NUMBER << " components: " << max_num_faces << std::endl;
-
-
-    // hole filling
-    std::cout << std::endl;
-    std::cout << "HOLE FILLING" << std::endl;
-
-    double max_hole_diam = max_diagonal;
-    int max_num_hole_edges = max_num_faces;
-
-    std::cout << "Max hole diameter: " << max_diagonal << std::endl;
-    std::cout << "Max number of hole edges: " << max_num_faces << std::endl;
-
-    t.start();
-
-    unsigned int nb_holes = 0;
-    std::vector<halfedge_descriptor> border_cycles;
-
-    PMP::extract_boundary_cycles(mesh, std::back_inserter(border_cycles));
-
-    for (halfedge_descriptor h : border_cycles)
-    {
-        if (max_hole_diam > 0 && max_num_hole_edges > 0 &&
-            !is_small_hole(h, mesh, max_hole_diam, max_num_hole_edges))
-            continue;
-
-        PMP::triangulate_hole(mesh, h);
-
-        ++nb_holes;
-    }
-    t.stop();
-
-    std::cout << nb_holes << " holes have been filled." << std::endl;
-    std::cout << "Done in " << t.time() << " seconds." << std::endl;
-    t.reset();
-
-    // simplification
-    /*std::cout << std::endl;
-    std::cout << "MESH SIMPLIFICATION" << std::endl;
-    std::cout << "Stop ratio: " << MESH_SIMPLIFICATION_STOP_RATIO << std::endl;
-
-    t.start();
-    SMS::Edge_count_ratio_stop_predicate<Mesh> stop(MESH_SIMPLIFICATION_STOP_RATIO);
-    typedef SMS::LindstromTurk_placement<Mesh> Placement;
-    SMS::Bounded_normal_change_filter<> filter;
-    int r = SMS::edge_collapse(mesh, stop,
-        CGAL::parameters::get_cost(SMS::LindstromTurk_cost<Mesh>())
-        .filter(filter)
-        .get_placement(Placement()));
-    t.stop();
-    std::cout << r << " edgegs removed." << std::endl;
-    std::cout << "Done in " << t.time() << " seconds." << std::endl;
-    t.reset();*/
 
     // alpha wrapping
     std::cout << std::endl;
@@ -304,34 +307,37 @@ int main(int argc, char* argv[])
     FCCmap fccmap1 = wrap_copy.add_property_map<face_descriptor, faces_size_type>("f:CC").first;
     faces_size_type num1 = PMP::connected_components(wrap_copy, fccmap1);
 
-    std::vector<Mesh> meshes1(num1);
-    avg_num_faces = 0;
+    if (num1 > FILTERATION_MIN_COMPONENT_COUNT) {
 
-    for (int i = 0; i < num1; ++i)
-    {
-        Filtered_graph ffg(wrap_copy, i, fccmap1);
-        CGAL::copy_face_graph(ffg, meshes1[i]);
+        std::vector<Mesh> meshes1(num1);
+        avg_num_faces = 0;
 
-        int n = num_faces(meshes1[i]);
-        avg_num_faces += n;
+        for (int i = 0; i < num1; ++i)
+        {
+            Filtered_graph ffg(wrap_copy, i, fccmap1);
+            CGAL::copy_face_graph(ffg, meshes1[i]);
+
+            int n = num_faces(meshes1[i]);
+            avg_num_faces += n;
+        }
+
+        avg_num_faces /= num1;
+
+        t.stop();
+        std::cout << "Done in " << t.time() << "seconds." << std::endl;
+        t.reset();
+
+        std::cout << std::endl;
+        std::cout << "FINAL FILTERING" << std::endl;
+        std::cout << "Filtering components of face count < " << (int)(avg_num_faces * FINAL_FILTER_SIZE_RATIO) << "." << std::endl;
+        //std::cout << "Filtering components of face count < " << FINAL_FILTER_FACE_COUNT << "." << std::endl;
+        t.start();
+        PMP::keep_large_connected_components(wrap, (int)(avg_num_faces * FINAL_FILTER_SIZE_RATIO));
+        //PMP::keep_large_connected_components(wrap, (int)(FINAL_FILTER_FACE_COUNT));
+        t.stop();
+        std::cout << "Done in " << t.time() << " seconds." << std::endl;
+        t.reset();
     }
-
-    avg_num_faces /= num1;
-
-    t.stop();
-    std::cout << "Done in " << t.time() << "seconds." << std::endl;
-    t.reset();
-
-    std::cout << std::endl;
-    std::cout << "FINAL FILTERING" << std::endl;
-    std::cout << "Filtering components of face count < " << (int)(avg_num_faces * FINAL_FILTER_SIZE_RATIO) << "." << std::endl;
-    //std::cout << "Filtering components of face count < " << FINAL_FILTER_FACE_COUNT << "." << std::endl;
-    t.start();
-    PMP::keep_large_connected_components(wrap, (int)(avg_num_faces*FINAL_FILTER_SIZE_RATIO));
-    //PMP::keep_large_connected_components(wrap, (int)(FINAL_FILTER_FACE_COUNT));
-    t.stop();
-    std::cout << "Done in " << t.time() << " seconds." << std::endl;
-    t.reset();
     
     // Save the result
     std::cout << std::endl;

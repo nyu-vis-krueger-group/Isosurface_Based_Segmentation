@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
 
 	std::cout << isovalue;
 
-	std::string mode = argv[2];
+	std::string mode = argc > 2 ? argv[2] : "DETECT";
 	if (!mode.compare("EXTRACT")) {
 		// extract contour
 		FlyingEdges3D contourExtractor(tiffReader.getOutputPort());

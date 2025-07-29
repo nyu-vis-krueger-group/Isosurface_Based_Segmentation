@@ -8,7 +8,10 @@ set "ISOVALUE_EXE=C:\Users\chaha\dev\bio_med_vis_2025\Process_Volumes\out\build\
 python pipeline.py ^
       --zarr "%ZARR%" ^
       --meta "%META%" ^
-      --exe  "%ISOVALUE_EXE%"
+      --exe  "%ISOVALUE_EXE%" ^
+      --width 909 ^
+      --height 1377 ^
+      --channels 35 48 7 3 47 42 38 21 30 26 19
 goto :eof
 
 :error

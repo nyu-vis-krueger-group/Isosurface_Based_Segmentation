@@ -6,4 +6,5 @@ py/build
 .venv
 *.off
 *.ply
+*.csv
 *.tiff

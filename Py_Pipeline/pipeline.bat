@@ -12,6 +12,11 @@ python pipeline.py ^
       --width 909 ^
       --height 1377 ^
       --channels 35 48 7 3 47 42 38 21 30 26 19
+
+python global_aggregate.py ^
+      --input_csv "pattern_freq.csv" ^
+      --output_csv "global_freq.csv"
+
 goto :eof
 
 :error

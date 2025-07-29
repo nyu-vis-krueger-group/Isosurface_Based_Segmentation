@@ -6,8 +6,7 @@ Sliding‑window iso‑value detector + channel‑combination histogram.
 * Channels deduped (first occurrence, skip "do not use"), or user-specified by --channels.
 * Outputs:
   - Per‑tile iso‑values CSV (--out_iso).
-  - One big CSV of per‑tile pattern frequencies (--out_tile_freq).
-  - Global pattern frequencies CSV (--out_global_freq).
+  - One big CSV of per‑tile pattern frequencies (--out_freq).
 """
 import argparse, csv, math, subprocess, tempfile
 from pathlib import Path
@@ -67,22 +66,20 @@ def decode(code, ch_list):
 
 def main():
     pa = argparse.ArgumentParser()
-    pa.add_argument("--zarr",            required=True, help="OME-Zarr URL or path")
-    pa.add_argument("--meta",            required=True, help="URL to OME-XML metadata")
-    pa.add_argument("--exe",             required=True, help="Path to iso-value extractor executable")
-    pa.add_argument("--width",           type=int, default=202, help="Tile width in X")
-    pa.add_argument("--height",          type=int, default=204, help="Tile height in Y")
-    pa.add_argument("--channels",        type=int, nargs='+', help="Optional list of channel indices to process directly")
-    pa.add_argument("--out_iso",         default="iso_values.csv", help="Per‑tile isovalues CSV")
-    pa.add_argument("--out_tile_freq",    default="tile_pattern_freq.csv", help="Per‑tile pattern frequencies CSV")
-    pa.add_argument("--out_global_freq", default="global_pattern_freq.csv", help="Global pattern frequencies CSV")
+    pa.add_argument("--zarr",   required=True, help="OME-Zarr URL or path")
+    pa.add_argument("--meta",   required=True, help="URL to OME-XML metadata")
+    pa.add_argument("--exe",    required=True, help="Path to iso-value extractor executable")
+    pa.add_argument("--width",  type=int, default=202, help="Tile width in X")
+    pa.add_argument("--height", type=int, default=204, help="Tile height in Y")
+    pa.add_argument("--channels", type=int, nargs='+',
+                    help="Optional list of channel indices to process directly")
+    pa.add_argument("--out_iso",  default="iso_values.csv", help="Per‑tile isovalues CSV")
+    pa.add_argument("--out_freq", default="pattern_freq.csv", help="Per‑tile pattern frequencies CSV")
     args = pa.parse_args()
 
-    # load volume and dimensions
     vol = load_zarr_volume(args.zarr)
     _, _, Z, Y, X = vol.shape
 
-    # determine channels
     all_names = fetch_channel_names(args.meta)
     if args.channels:
         ch_list = [(idx, all_names[idx]) for idx in args.channels]
@@ -92,7 +89,7 @@ def main():
         print(f"[info] deduped to {len(ch_list)} channels")
     n_ch = len(ch_list)
 
-    # choose integer dtype for bitmask
+    
     if n_ch <= 16:
         pattern_dtype, bit_limit = np.uint16, 16
     elif n_ch <= 32:
@@ -101,15 +98,13 @@ def main():
         pattern_dtype, bit_limit = np.uint64, 64
     print(f"[info] encoding patterns with {bit_limit}-bit ({pattern_dtype.__name__}), {n_ch} channels")
 
-    exe_path   = Path(args.exe).resolve()
-    iso_rows   = []
-    tile_rows  = []  # per-tile histogram rows
-    global_counts = np.zeros(2 ** n_ch, dtype=np.uint64)
+    exe_path = Path(args.exe).resolve()
+    iso_rows = []
+    tile_rows = []  
 
-    # iterate tiles
     n_tiles_x = math.ceil(X / args.width)
     n_tiles_y = math.ceil(Y / args.height)
-    print(f"[info] grid: {n_tiles_x}×{n_tiles_y} over {X}×{Y}")
+    print(f"[info] grid: {n_tiles_x}×{n_tiles_y} tiles over {X}×{Y}")
 
     with tempfile.TemporaryDirectory() as tmpd:
         tmpd = Path(tmpd)
@@ -117,68 +112,68 @@ def main():
             y1 = min(y0 + args.height, Y)
             for x0 in range(0, X, args.width):
                 x1 = min(x0 + args.width, X)
-                print(f"\n[Tile x:{x0}-{x1}, y:{y0}-{y1}] ")
-
-                # gather masks per channel
+                print(f"\n[Tile x:{x0}-{x1}, y:{y0}-{y1}]")
                 tile_masks = []
+
                 for bit, (ch_idx, ch_name) in enumerate(ch_list):
                     if bit >= bit_limit:
                         raise RuntimeError(f">{bit_limit} channels; cannot encode with {pattern_dtype}")
+
+                    print(f"  • Ch {ch_idx} ({ch_name}): reading…", end="", flush=True)
                     sub = vol[0, ch_idx, :, y0:y1, x0:x1].compute()
+                    print(" done")
+
                     if not sub.any():
+                        print("      » empty → skip ISO")
                         tile_masks.append(np.zeros_like(sub, dtype=bool))
-                    else:
-                        tif_f = tiff_path(tmpd, ch_idx, x0, y0)
-                        write_tiff(sub, tif_f)
-                        try:
-                            iso = float(subprocess.check_output([exe_path, str(tif_f)], text=True).strip())
-                            iso_rows.append([ch_idx, sanitize(ch_name), x0, x1, y0, y1, iso])
-                            tile_masks.append(sub >= iso)
-                        except Exception:
-                            tile_masks.append(np.zeros_like(sub, dtype=bool))
-                        finally:
-                            tif_f.unlink(missing_ok=True)
+                        continue
+
+                    tif_f = tiff_path(tmpd, ch_idx, x0, y0)
+                    write_tiff(sub, tif_f)
+                    print("      » TIFF written, running exe…", end="", flush=True)
+                    try:
+                        iso = float(subprocess.check_output([exe_path, str(tif_f)], text=True).strip())
+                        print(f" iso={iso}")
+                        iso_rows.append([ch_idx, sanitize(ch_name), x0, x1, y0, y1, iso])
+                        mask = sub >= iso
+                    except (subprocess.CalledProcessError, ValueError) as e:
+                        print(f" failed ({e})")
+                        mask = np.zeros_like(sub, dtype=bool)
+                    finally:
+                        tif_f.unlink(missing_ok=True)
+
+                    tile_masks.append(mask)
 
                 if not tile_masks:
                     continue
 
-                # encode bitmask
-                shape = tile_masks[0].shape
-                pattern = np.zeros(shape, dtype=pattern_dtype)
+               
+                pattern = np.zeros(tile_masks[0].shape, dtype=pattern_dtype)
                 for bit, m in enumerate(tile_masks):
                     pattern |= (m.astype(pattern_dtype) << bit)
 
-                # histogram
-                flat   = pattern.ravel()
-                counts = np.bincount(flat, minlength=2 ** n_ch)
-                global_counts += counts
+               
+                flat = pattern.ravel()
+                counts = np.bincount(flat, minlength=2 ** n_ch).astype(np.uint64)
                 for code, cnt in enumerate(counts):
                     if cnt:
-                        tile_rows.append([x0, x1, y0, y1, code, decode(code, ch_list), int(cnt)])
+                        tile_rows.append([x0, x1, y0, y1, code,
+                                          decode(code, ch_list), int(cnt)])
 
-    # write per-tile isovalues
+   
     with open(args.out_iso, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["chan_idx","chan_name","x0","x1","y0","y1","iso"])
         w.writerows(iso_rows)
     print(f"[done] wrote {len(iso_rows)} rows → {args.out_iso}")
 
-    # write per-tile pattern frequencies
-    with open(args.out_tile_freq, "w", newline="") as f:
+    
+    with open(args.out_freq, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["x0","x1","y0","y1","pattern_code","channels","count"])
+        w.writerow(["x0","x1","y0","y1","pattern_code","channels","count"] )
         w.writerows(tile_rows)
-    print(f"[done] wrote {len(tile_rows)} rows → {args.out_tile_freq}")
+    print(f"[done] wrote {len(tile_rows)} rows → {args.out_freq}")
 
-    # write global pattern frequencies
-    with open(args.out_global_freq, "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["pattern_code","channels","count"] )
-        for code, cnt in enumerate(global_counts):
-            if cnt:
-                w.writerow([code, decode(code, ch_list), int(cnt)])
-    non_zero = np.count_nonzero(global_counts)
-    print(f"[done] wrote {non_zero} combos → {args.out_global_freq}")
 
 if __name__ == "__main__":
     main()

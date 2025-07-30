@@ -72,7 +72,8 @@
         "CMAKE_C_COMPILER": "gcc",
         "CMAKE_CXX_COMPILER": "g++",
         "CMAKE_CXX_FLAGS": "-std=c++17",
-        "CGAL_DISABLE_ASSERTIONS": "ON"
+        "CGAL_DISABLE_ASSERTIONS": "ON",
+        "VTK_DIR": "$env{VTK_DIR}"
       },
       "condition": {
         "type": "equals",

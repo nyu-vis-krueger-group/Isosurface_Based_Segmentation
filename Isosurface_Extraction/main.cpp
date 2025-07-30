@@ -2,7 +2,6 @@
 #include <IsosurfaceExtraction/FlyingEdges3D.h>
 #include <Processing/CummulativeLaplacianHistogram.h>
 #include <IO/WritePLY.h>
-#include <windows.h>
 
 /*
 * Usage: ./IsosurfaceExtraction.exe inputTiff.tiff mode[DETECT/EXTRACT]

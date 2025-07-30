@@ -1,7 +1,7 @@
 #ifndef WRITE_PLY_H
 #define WRITE_PLY_H
 
-#include <vtkPlyWriter.h>
+#include <vtkPLYWriter.h>
 #include <vtkPolyData.h>
 #include <string>
 

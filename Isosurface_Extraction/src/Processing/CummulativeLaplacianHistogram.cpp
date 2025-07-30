@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <cmath>
 
 CummulativeLaplacianHistogram::CummulativeLaplacianHistogram(vtkAlgorithmOutput* inputConnection, vtkImageData* imageData) {
 	p_laplacian = vtkImageLaplacian::New();

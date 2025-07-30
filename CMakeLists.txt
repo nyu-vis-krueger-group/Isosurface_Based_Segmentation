@@ -3,6 +3,6 @@
 project ("BioVis25")
 
 add_subdirectory ("Isosurface_Extraction")
-add_subdirectory ("Mesh_Processing")
-add_subdirectory("Heirarchical_Clustering")
-add_subdirectory("Combine_Meshes")
+#add_subdirectory ("Mesh_Processing")
+#add_subdirectory("Heirarchical_Clustering")
+#add_subdirectory("Combine_Meshes")

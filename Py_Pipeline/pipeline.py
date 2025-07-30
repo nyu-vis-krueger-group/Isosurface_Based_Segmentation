@@ -1,13 +1,5 @@
 ﻿#!/usr/bin/env python3
-"""
-Sliding‑window iso‑value detector + channel‑combination histogram.
 
-* Tile‑first, channel‑inside.
-* Channels deduped (first occurrence, skip "do not use"), or user-specified by --channels.
-* Outputs:
-  - Per‑tile iso‑values CSV (--out_iso).
-  - One big CSV of per‑tile pattern frequencies (--out_freq).
-"""
 import argparse, csv, math, subprocess, tempfile
 from pathlib import Path
 import re
